@@ -1,0 +1,5 @@
+/.idea/
+/poetry.lock
+
+*.ipynb
+.ipynb_checkpoints
