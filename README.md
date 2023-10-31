@@ -6,7 +6,7 @@ This package provides a [sklearn-api](https://scikit-learn.org/stable/glossary.h
 
 # Install
 ```bash
-pip install git+https://github.com/stheid/scikit-slim
+pip install git+https://github.com/stheid/scikit-slim](https://github.com/stheid/sklearn-riskslim-slim)
 ```
 
 # Usage
