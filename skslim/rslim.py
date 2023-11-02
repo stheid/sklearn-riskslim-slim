@@ -5,6 +5,7 @@ from typing import Optional
 
 import numpy as np
 import pandas as pd
+from scipy.special import expit
 from riskslim import CoefficientSet, run_lattice_cpa
 from sklearn.base import ClassifierMixin, BaseEstimator
 from sklearn.exceptions import NotFittedError
@@ -104,13 +105,13 @@ class RiskSlim(BaseEstimator, ClassifierMixin):
         if self.model is None:
             raise NotFittedError()
         rho = self.model
-        return 1 / (1 + np.exp(rho[0] - X @ rho[1:]))
+        return expit(rho[0] - X @ rho[1:])
 
     def predict(self, X):
         if self.model is None:
             raise NotFittedError()
         rho = self.model
-        return np.array(np.log(1) + X @ rho[1:] >= rho[0], dtype=int)
+        return np.array(X @ rho[1:] >= rho[0], dtype=int)
 
 
 if __name__ == '__main__':
