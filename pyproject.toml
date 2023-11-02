@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "sklearn-(risk)slim"
+name = "sklearn-riskslim-slim"
 version = "0.1.0"
 description = ""
 authors = ["Stefan Heid <stefan.heid@upb.de>"]
