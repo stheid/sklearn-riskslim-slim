@@ -111,7 +111,7 @@ class RiskSlim(BaseEstimator, ClassifierMixin):
         if self.model is None:
             raise NotFittedError()
         rho = self.model
-        return np.array(X @ rho[1:] >= rho[0], dtype=int)
+        return np.array(rho[0] <= X @ rho[1:], dtype=int)
 
 
 if __name__ == '__main__':
