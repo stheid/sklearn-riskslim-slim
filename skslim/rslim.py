@@ -105,7 +105,8 @@ class RiskSlim(BaseEstimator, ClassifierMixin):
         if self.model is None:
             raise NotFittedError()
         rho = self.model
-        return expit(rho[0] - X @ rho[1:])
+        proba_true = expit(rho[0] - X @ rho[1:])
+        return np.vstack([1 - proba_true, proba_true]).T
 
     def predict(self, X):
         if self.model is None:
