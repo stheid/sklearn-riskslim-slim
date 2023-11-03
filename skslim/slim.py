@@ -1,5 +1,4 @@
 import logging
-from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -11,7 +10,7 @@ logger = logging.getLogger("default")
 
 
 class Slim(BaseEstimator, ClassifierMixin):
-    def __init__(self, max_score=3, min_score=None, C=1e-3, random_state=None, timeout=900):
+    def __init__(self, max_score=3, min_score=None, C=1e-3, random_state=0, timeout=900):
         self.max_score = max_score
         self.min_score = min_score
         self.C = C
@@ -19,7 +18,8 @@ class Slim(BaseEstimator, ClassifierMixin):
         self.timeout = timeout
 
         self.computed_min_score = -max_score if min_score is None else min_score
-        self.model = None  # type: Optional[np.array]
+        self.scores = None
+        self.threshold = None
         self.solution_status_code = None
 
     def fit(self, X, y):
@@ -102,26 +102,20 @@ class Slim(BaseEstimator, ClassifierMixin):
                 logger.warning("Solution is not optimal due to timeout")
 
             rho = summary["rho"]
-            # inverting the intersept
-            rho[0] = -rho[0]
+
+            self.scores = rho[1:]
+            self.threshold = -rho[0]
         except ValueError:
             logger.warning("No features have been selected")
-            rho = np.zeros(X.shape[1])
-            rho[0] = 1
-
-        self.model = rho
+            self.scores = np.zeros(X.shape[1])
+            self.threshold = 1
 
         return self
 
     def predict(self, X):
-        if self.model is None:
+        if self.scores is None:
             raise NotFittedError()
-        rho = self.model
-
-        return np.array(X @ rho[1:] >= rho[0], dtype=int)
-
-    def __str__(self):
-        return np.array_str(self.model)
+        return np.array(self.threshold <= X @ self.scores, dtype=int)
 
 
 if __name__ == '__main__':
@@ -131,4 +125,6 @@ if __name__ == '__main__':
     X = df.loc[:, df.columns != 'Benign']
     y = df.Benign
     X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=42)
-    print(Slim(max_score=1, random_state=42).fit(X_train, y_train).score(X_test, y_test))
+    clf = Slim(max_score=1, random_state=42).fit(X_train, y_train)
+    print(clf.scores, clf.threshold)
+    print(clf.score(X_test, y_test))

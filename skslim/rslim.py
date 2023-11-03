@@ -1,12 +1,11 @@
 import logging
 import os
 from contextlib import redirect_stdout
-from typing import Optional
 
 import numpy as np
 import pandas as pd
-from scipy.special import expit
 from riskslim import CoefficientSet, run_lattice_cpa
+from scipy.special import expit
 from sklearn.base import ClassifierMixin, BaseEstimator
 from sklearn.exceptions import NotFittedError
 
@@ -14,7 +13,7 @@ logger = logging.getLogger("default")
 
 
 class RiskSlim(BaseEstimator, ClassifierMixin):
-    def __init__(self, max_score=3, min_score=None, C=1e-3, random_state=None, timeout=900):
+    def __init__(self, max_score=3, min_score=None, C=1e-3, random_state=0, timeout=900):
         self.max_score = max_score
         self.min_score = min_score
         self.C = C
@@ -22,7 +21,8 @@ class RiskSlim(BaseEstimator, ClassifierMixin):
         self.timeout = timeout
 
         self.computed_min_score = -max_score if min_score is None else min_score
-        self.model = None  # type: Optional[np.array]
+        self.scores = None
+        self.threshold = None
         self.solution_status_code = None
 
     def fit(self, X, y):
@@ -36,6 +36,15 @@ class RiskSlim(BaseEstimator, ClassifierMixin):
 
         # create coefficient set and set the value of the offset parameter
         feature_names = ["(Intercept)"] + [str(i) for i in range(X.shape[1] - 1)]
+
+        data = {
+            'X': X,
+            'Y': y,
+            'variable_names': feature_names,
+            'outcome_name': "out",
+            'sample_weights': np.ones(X.shape[0]),
+        }
+
         coef_set = CoefficientSet(variable_names=feature_names, ub=self.max_score, lb=self.computed_min_score, sign=0,
                                   print_flag=False)
         coef_set.update_intercept_bounds(X=X, y=y, max_offset=50)
@@ -77,14 +86,6 @@ class RiskSlim(BaseEstimator, ClassifierMixin):
             'cplex_mipemphasis': 0,  # cplex MIP strategy
         }
 
-        data = {
-            'X': X,
-            'Y': y,
-            'variable_names': feature_names,
-            'outcome_name': "out",
-            'sample_weights': np.ones(X.shape[0]),
-        }
-
         # train model using lattice_cpa
         with redirect_stdout(open(os.devnull, 'w', encoding='utf-8')):
             model_info, mip_info, lcpa_info = run_lattice_cpa(data, constraints, settings)
@@ -95,24 +96,22 @@ class RiskSlim(BaseEstimator, ClassifierMixin):
             logger.warning("Solution is not optimal due to timeout")
 
         rho = model_info['solution']
-        rho[0] = -rho[0]
 
-        self.model = rho
+        self.scores = rho[1:]
+        self.threshold = -rho[0]
 
         return self
 
     def predict_proba(self, X):
-        if self.model is None:
+        if self.scores is None:
             raise NotFittedError()
-        rho = self.model
-        proba_true = expit(rho[0] - X @ rho[1:])
+        proba_true = expit(self.threshold - X @ self.scores)
         return np.vstack([1 - proba_true, proba_true]).T
 
     def predict(self, X):
-        if self.model is None:
+        if self.scores is None:
             raise NotFittedError()
-        rho = self.model
-        return np.array(rho[0] <= X @ rho[1:], dtype=int)
+        return np.array(self.threshold <= X @ self.scores, dtype=int)
 
 
 if __name__ == '__main__':
@@ -122,4 +121,6 @@ if __name__ == '__main__':
     X = df.loc[:, df.columns != 'Benign']
     y = df.Benign
     X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=42)
-    print(RiskSlim(max_score=1, random_state=42).fit(X_train, y_train).score(X_test, y_test))
+    clf = RiskSlim(max_score=1, random_state=42).fit(X_train, y_train)
+    print(clf.scores, clf.threshold)
+    print(clf.score(X_test, y_test))
