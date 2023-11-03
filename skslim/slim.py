@@ -107,7 +107,7 @@ class Slim(BaseEstimator, ClassifierMixin):
             self.threshold = -rho[0]
         except ValueError:
             logger.warning("No features have been selected")
-            self.scores = np.zeros(X.shape[1])
+            self.scores = np.zeros(X.shape[1] - 1)
             self.threshold = 1
 
         return self
