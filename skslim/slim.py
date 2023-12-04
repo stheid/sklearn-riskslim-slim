@@ -10,12 +10,13 @@ logger = logging.getLogger("default")
 
 
 class Slim(BaseEstimator, ClassifierMixin):
-    def __init__(self, max_score=3, min_score=None, C=1e-3, random_state=0, timeout=900):
+    def __init__(self, max_score=3, min_score=None, *, C=1e-3, random_state=0, timeout=900, balance_class_weights=True):
         self.max_score = max_score
         self.min_score = min_score
         self.C = C
         self.random_state = random_state
         self.timeout = timeout
+        self.balance_class_weights = balance_class_weights
 
         self.computed_min_score = -max_score if min_score is None else min_score
         self.scores = None
@@ -54,14 +55,21 @@ class Slim(BaseEstimator, ClassifierMixin):
         intercept_ub = -min(min_scores) + 1
         coef_constraints.set_field('ub', '(Intercept)', intercept_ub)
 
+        w_pos, w_neg = 1, 1
+        if self.balance_class_weights:
+            n = y.size
+            n_pos = np.count_nonzero(y == 1)
+            w_neg = n_pos / n
+            w_pos = 1 - w_neg
+
         # create SLIM IP
         slim_input = {
             'X': X,
             'X_names': feature_names,
             'Y': y,
             'C_0': self.C,
-            'w_pos': 1.0,
-            'w_neg': 1.0,
+            'w_pos': w_pos,
+            'w_neg': w_neg,
             'L0_min': 0,
             'L0_max': float('inf'),
             'err_min': 0,

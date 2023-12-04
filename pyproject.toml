@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "sklearn-riskslim-slim"
-version = "0.1.1"
+version = "0.2.0"
 description = ""
 authors = ["Stefan Heid <stefan.heid@upb.de>"]
 readme = "README.md"
