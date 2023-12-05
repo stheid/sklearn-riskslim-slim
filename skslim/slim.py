@@ -10,13 +10,15 @@ logger = logging.getLogger("default")
 
 
 class Slim(BaseEstimator, ClassifierMixin):
-    def __init__(self, max_score=3, min_score=None, *, C=1e-3, random_state=0, timeout=900, balance_class_weights=True):
+    def __init__(self, max_score=3, min_score=None, *, C=1e-3, random_state=0, timeout=900, balance_class_weights=True,
+                 validate=False):
         self.max_score = max_score
         self.min_score = min_score
         self.C = C
         self.random_state = random_state
         self.timeout = timeout
         self.balance_class_weights = balance_class_weights
+        self.validate = validate
 
         self.computed_min_score = -max_score if min_score is None else min_score
         self.scores = None
@@ -101,8 +103,9 @@ class Slim(BaseEstimator, ClassifierMixin):
         try:
             model.solve()
 
-            # run quick and dirty tests to make sure that IP output is correct
-            check_slim_IP_output(model, slim_info, X, y, coef_constraints)
+            if self.validate:
+                # run quick and dirty tests to make sure that IP output is correct
+                check_slim_IP_output(model, slim_info, X, y, coef_constraints)
             summary = get_slim_summary(model, slim_info, X, y)
             self.solution_status_code = summary["solution_status_code"]
 
