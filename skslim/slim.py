@@ -10,11 +10,12 @@ logger = logging.getLogger("default")
 
 
 class Slim(BaseEstimator, ClassifierMixin):
-    def __init__(self, max_score=3, min_score=None, *, C=1e-3, random_state=0, timeout=900, balance_class_weights=True,
+    def __init__(self, max_score=3, min_score=None, *, C=1e-3, eps=1e-3, random_state=0, timeout=900, balance_class_weights=True,
                  validate=False):
         self.max_score = max_score
         self.min_score = min_score
         self.C = C
+        self.eps = eps
         self.random_state = random_state
         self.timeout = timeout
         self.balance_class_weights = balance_class_weights
@@ -80,6 +81,7 @@ class Slim(BaseEstimator, ClassifierMixin):
             'pos_err_max': 1.0,
             'neg_err_min': 0,
             'neg_err_max': 1.0,
+            'epsilon': self.eps,
             'coef_constraints': coef_constraints
         }
 
